@@ -1,0 +1,16 @@
+id = "spice-rc-phase-003"
+title = "Analog RC Low-Pass Filter Phase & Cutoff Tuning"
+domain = "electrical_engineering"
+subdomain = "analog_spice"
+difficulty = "medium"
+estimated_human_time_minutes = 30
+tags = ["ngspice", "ac-analysis", "phase-angle", "analog", "rc-filter"]
+
+[environment]
+dockerfile = "Dockerfile"
+workdir = "/workspace"
+timeout_seconds = 60
+
+[verification]
+command = "python3 /tests/grade.py"
+oracle_script = "solution/solve.sh"
