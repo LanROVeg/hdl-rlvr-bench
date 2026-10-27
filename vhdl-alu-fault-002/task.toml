@@ -1,0 +1,16 @@
+id = "vhdl-alu-flags-001"
+title = "8-Bit Combinational ALU with NZVC Hardware Status Flags"
+domain = "electrical_engineering"
+subdomain = "rtl_design_vhdl"
+difficulty = "medium"
+estimated_human_time_minutes = 45
+tags = ["vhdl", "ghdl", "alu", "twos-complement", "rtl", "digital-logic"]
+
+[environment]
+dockerfile = "Dockerfile"
+workdir = "/workspace"
+timeout_seconds = 120
+
+[verification]
+command = "python3 /tests/grade.py"
+oracle_script = "solution/solve.sh"
