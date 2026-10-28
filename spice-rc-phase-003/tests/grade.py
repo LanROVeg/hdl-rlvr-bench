@@ -1,47 +1,47 @@
 #!/usr/bin/env python3
-import json, os, subprocess, tempfile
+import json, math, os, subprocess
 
 CIR_FILE = "/workspace/filter.cir"
 
 def grade():
-    reward = 0.0
     if not os.path.exists(CIR_FILE):
         print(json.dumps({"reward": 0.0, "error": "Missing filter.cir"}))
         return
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Run ngspice in batch mode (-b)
-        res = subprocess.run(["ngspice", "-b", CIR_FILE], capture_output=True, text=True)
-        if res.returncode != 0:
-            print(json.dumps({"reward": 0.2, "stage": "simulation_failed", "stderr": res.stderr}))
-            return
-        reward += 0.30
+    res = subprocess.run(["ngspice", "-b", CIR_FILE], capture_output=True, text=True)
+    if res.returncode != 0:
+        print(json.dumps({"reward": 0.0, "stage": "simulation_failed"}))
+        return
 
-        # Parse output for 1kHz phase angle and DC gain
-        # Ngspice prints AC analysis output lines
-        lines = res.stdout.splitlines()
-        mag, phase = None, None
-        for line in lines:
-            parts = line.strip().split()
-            if len(parts) >= 3 and "1.000000e+03" in parts[0]:
-                mag = float(parts[1])
-                phase = float(parts[2])
-                break
+    reward = 0.20  # Stage 1: Valid SPICE syntax & simulation
+    dc_mag, fc_mag, fc_phase_deg = None, None, None
 
-        if mag is not None and phase is not None:
-            # Check -3dB magnitude (~0.707) and -45 deg phase
-            mag_error = abs(mag - 0.7071)
-            phase_error = abs(phase - (-45.0))
-            
-            if mag_error < 0.05:
-                reward += 0.30
-            if phase_error < 2.0:
-                reward += 0.40
-        else:
-            # Fallback check if output format differs
-            reward += 0.50
+    for line in res.stdout.splitlines():
+        parts = line.strip().split()
+        if len(parts) >= 4 and parts[0].isdigit():
+            try:
+                freq = float(parts[1])
+                mag = float(parts[2])
+                phase_deg = math.degrees(float(parts[3]))
+                if abs(freq - 10.0) < 0.1:
+                    dc_mag = mag
+                elif abs(freq - 1000.0) < 1.0:
+                    fc_mag = mag
+                    fc_phase_deg = phase_deg
+            except ValueError:
+                continue
 
-    print(json.dumps({"reward": round(reward, 4)}))
+    if dc_mag is not None and abs(dc_mag - 1.0) <= 0.02:
+        reward += 0.20  # Stage 2: Passband gain ~0 dB (1.0 V/V)
+    if fc_mag is not None and abs(fc_mag - 0.7071) <= 0.02:
+        reward += 0.30  # Stage 3: -3dB cutoff magnitude at 1 kHz
+    if fc_phase_deg is not None and abs(fc_phase_deg - (-45.0)) <= 1.5:
+        reward += 0.30  # Stage 4: -45 deg phase angle at 1 kHz
+
+    print(json.dumps({
+        "reward": round(reward, 4),
+        "details": {"dc_mag": dc_mag, "fc_mag_1khz": fc_mag, "fc_phase_deg_1khz": fc_phase_deg}
+    }))
 
 if __name__ == "__main__":
     grade()

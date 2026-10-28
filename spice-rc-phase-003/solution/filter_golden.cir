@@ -1,7 +1,7 @@
-* Single-Pole RC Low-Pass Filter - Golden Solution
+* Single-Pole RC Low-Pass Filter - Golden Solution (fc = 1.00 kHz)
 V1 in 0 AC 1.0
-R1 in out 1591.5
+R1 in out 1591.55
 C1 out 0 100nF
 .ac dec 10 10 100k
-.print ac v(out) phase(v(out))
+.print ac vm(out) vp(out)
 .end

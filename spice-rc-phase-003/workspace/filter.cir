@@ -1,7 +1,7 @@
-* Single-Pole RC Low-Pass Filter - Starter Netlist
+* Single-Pole RC Low-Pass Filter - Starter Netlist (Wrong R1 value: fc = 3.18 kHz)
 V1 in 0 AC 1.0
 R1 in out 500.0
 C1 out 0 100nF
 .ac dec 10 10 100k
-.print ac v(out)
+.print ac vm(out) vp(out)
 .end
