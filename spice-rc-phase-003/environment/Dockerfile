@@ -1,10 +1,6 @@
-FROM ubuntu:24.04
+FROM ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
-    ngspice \
-    python3 \
-    python3-scipy \
+RUN apt-get update && apt-get install -y --no-install-recommends ngspice python3 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace
 COPY workspace/ /workspace/
-COPY instruction.md /workspace/instruction.md

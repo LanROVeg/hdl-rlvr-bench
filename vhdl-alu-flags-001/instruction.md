@@ -26,3 +26,13 @@ Complete the synthesizable VHDL entity `alu_8b` located in `/workspace/alu_8b.vh
 - `Z` (`NZVC(2)`): `'1'` when `Result = x"00"`, else `'0'`.
 - Purely combinational logic required (no clock, no inferred latches).
 - You may use `ieee.numeric_std.all` and `ghdl -a --std=08 alu_8b.vhd` to test compilation.
+
+## Submission and verification contract
+Submit one self-contained `alu_8b` entity in `/workspace/alu_8b.vhd` (maximum 64 KiB).
+Use only `ieee.std_logic_1164.all` and optionally `ieee.numeric_std.all`.
+The design must synthesize in GHDL without inferred latches and be purely combinational.
+File I/O, foreign interfaces, external names, configurations, and additional entities are
+outside this task. The verifier synthesizes the source and simulates only the resulting
+combinational netlist. It checks all 524,288 binary A/B/opcode combinations.
+Score: 0.20 for an accepted synthesized design, 0.40 for correct result values, and
+0.40 for correct flags gated on a correct result. Invalid or incomplete runs receive zero.

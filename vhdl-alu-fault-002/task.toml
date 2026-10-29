@@ -1,16 +1,29 @@
-id = "vhdl-alu-flags-001"
-title = "8-Bit Combinational ALU with NZVC Hardware Status Flags"
+schema_version = "1.3"
+artifacts = ["/workspace/alu_8b.vhd"]
+
+[task]
+name = "lanroveg/vhdl-alu-fault-002"
+authors = [{name = "Caden Egan"}]
+description = "Diagnose and repair an 8-bit ALU"
+
+[metadata]
+id = "vhdl-alu-fault-002"
+title = "Diagnose and repair an 8-bit ALU"
+category = "rtl-debugging"
+difficulty = "easy"
 domain = "electrical_engineering"
-subdomain = "rtl_design_vhdl"
-difficulty = "medium"
-estimated_human_time_minutes = 45
-tags = ["vhdl", "ghdl", "alu", "twos-complement", "rtl", "digital-logic"]
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 120
+environment_mode = "separate"
+network_mode = "no-network"
 
 [environment]
-dockerfile = "Dockerfile"
+build_timeout_sec = 600
+cpus = 1
+memory_mb = 512
+network_mode = "no-network"
 workdir = "/workspace"
-timeout_seconds = 120
-
-[verification]
-command = "python3 /tests/grade.py"
-oracle_script = "solution/solve.sh"

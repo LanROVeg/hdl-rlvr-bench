@@ -15,3 +15,14 @@ Audit `/workspace/alu_8b.vhd` against the specification below, identify all func
 - `ALU_Sel = "111"`: Pass `A` unchanged (`V = '0', C = '0'`).
 - `N = NZVC(3)`: Always equals `Result(7)`.
 - `Z = NZVC(2)`: `'1'` if and only if `Result = x"00"`.
+
+
+## Submission and verification contract
+Submit one self-contained `alu_8b` entity in `/workspace/alu_8b.vhd` (maximum 64 KiB).
+Use only `ieee.std_logic_1164.all` and optionally `ieee.numeric_std.all`.
+The design must synthesize in GHDL without inferred latches and be purely combinational.
+File I/O, foreign interfaces, external names, configurations, and additional entities are
+outside this task. The verifier synthesizes the source and simulates only the resulting
+combinational netlist. It checks all 524,288 binary A/B/opcode combinations.
+Score: 0.20 for an accepted synthesized design, 0.40 for correct result values, and
+0.40 for correct flags gated on a correct result. Invalid or incomplete runs receive zero.

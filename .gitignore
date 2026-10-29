@@ -1,0 +1,8 @@
+# Personal planning material stays local
+RLVR_MASTER_CONTEXT.md
+*handoff*context*.md
+.venv/
+__pycache__/
+*.pyc
+jobs/
+check-results/
