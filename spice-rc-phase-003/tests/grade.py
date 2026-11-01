@@ -23,6 +23,7 @@ def value(token):
 def components():
     if not SOURCE.is_file() or SOURCE.is_symlink() or SOURCE.stat().st_size>16384:
         raise ValueError('Missing, oversized, or linked input')
+    # Read values only. Submitted directives never get passed to ngspice.
     found={}; ended=False
     for raw in SOURCE.read_text().splitlines():
         line=raw.strip()
@@ -55,6 +56,7 @@ def components():
     return found
 
 def measure(tmp,r,c,ac):
+    # Use true DC gain and one complex AC sample at the target frequency.
     analysis='.ac lin 1 1000 1000\n.print ac vr(out) vi(out)' if ac else '.dc V1 1 1 1\n.print dc v(out)'
     netlist=f'Verifier-owned RC measurement\nV1 in 0 DC 1 AC 1\nR1 in out {r:.17g}\nC1 out 0 {c:.17g}\n{analysis}\n.end\n'
     p=tmp/('ac.cir' if ac else 'dc.cir'); p.write_text(netlist)
@@ -83,6 +85,7 @@ def grade():
     dc_db=20*math.log10(abs(dc)) if dc else -math.inf
     mag_db=20*math.log10(math.hypot(real,imag))
     phase=math.degrees(math.atan2(imag,real))
+    # These tolerances match instruction.md; failed criteria earn no credit.
     score=.2
     score+=.2 if abs(dc_db)<=.1 else 0
     score+=.3 if abs(mag_db-(-3.01029995664))<=.1 else 0

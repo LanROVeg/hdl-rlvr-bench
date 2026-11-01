@@ -24,6 +24,7 @@ def evaluate(task,source):
     with tempfile.TemporaryDirectory() as name:
         candidate=Path(name)/'submission'
         if source is not None: candidate.write_text(source)
+        # Only the submitted source enters the container; tests stay read-only.
         args=['docker','run','--rm','--network','none','--memory','512m','--cpus','1',
               '--pids-limit','128','-v',f'{task}/tests:/tests:ro',
               '-v',f'{name}:/candidate:ro',f'ee-bench-{task.name}:local','bash','-lc']
@@ -38,17 +39,34 @@ def cases(task):
         golden=(task/'solution/filter_golden.cir').read_text()
         spoof=starter.replace('.end','.control\nrun\necho 0 1.000000e+01 1.0 0.0\necho 1 1.000000e+03 0.7071 -0.7853981633974483\nquit\n.endc\n.end')
         return [('nop',starter,'baseline'),('oracle',golden,'perfect'),
+                ('engineering_suffix',golden.replace('1591.55','1.59155k'),'perfect'),
+                ('scientific_value',golden.replace('1591.55','1.59155e3'),'perfect'),
+                ('wrong_resistance',golden.replace('1591.55','10000'),'imperfect'),
                 ('stdout_spoof',spoof,'zero'),('changed_topology',golden.replace('100nF','1nF'),'zero'),
                 ('include_attempt',golden.replace('.end','.include /solution/filter_golden.cir\n.end'),'zero'),
-                ('nonfinite_value',golden.replace('1591.55','NaN'),'zero'),('missing_file',None,'zero')]
+                ('nonfinite_value',golden.replace('1591.55','NaN'),'zero'),
+                ('overflow_value',golden.replace('1591.55','1e999'),'zero'),
+                ('negative_value',golden.replace('1591.55','-1591.55'),'zero'),
+                ('duplicate_component',golden.replace('.end','R1 in out 1591.55\n.end'),'zero'),
+                ('oversized_source','*' * 16385,'zero'),('missing_file',None,'zero')]
     starter=(task/'environment/workspace/alu_8b.vhd').read_text()
     golden=(task/'solution/alu_8b_golden.vhd').read_text()
     i=starter.lower().index('begin')+5
-    spoof=starter[:i]+'\nprocess begin report "SCORE_DATA:524288:524288"; wait; end process;\n'+starter[i:]
+    spoof=starter[:i]+'\nprocess begin report "VERIFIER_COUNTS:524288:524288"; wait; end process;\n'+starter[i:]
     wrong=golden.replace('NZVC   <= n_flag & z_flag & v_flag & c_flag;', 'NZVC <= "0000";')
     if wrong==golden: raise AssertionError('Flag mutation did not alter the source')
-    return [('nop',starter,'baseline'),('oracle',golden,'perfect'),('stdout_spoof',spoof,'no_increase'),
-            ('wrong_flags',wrong,'imperfect'),('syntax_error','not VHDL','zero'),
+    latch=golden.replace("res_v  := (others => '0');",'').replace('when others => res_v := A;','when others => null;')
+    clocked=golden.replace('process(A, B, ALU_Sel)','process(A)').replace(
+        "        u_a := '0' & unsigned(A);","        if rising_edge(A(0)) then\n        u_a := '0' & unsigned(A);").replace(
+        '    end process;','        end if;\n    end process;')
+    wrong_shift=golden.replace("c_flag := A(0);","c_flag := A(7);")
+    return [('nop',starter,'baseline'),('oracle',golden,'perfect'),
+            ('process_all',golden.replace('process(A, B, ALU_Sel)','process(all)'),'perfect'),
+            ('stdout_spoof',spoof,'no_increase'),('wrong_flags',wrong,'imperfect'),
+            ('wrong_shift_carry',wrong_shift,'imperfect'),('inferred_latch',latch,'zero'),
+            ('clocked_design',clocked,'zero'),
+            ('extra_entity',golden+'\nentity extra is end;\n','zero'),
+            ('oversized_source','--'+'x'*65536,'zero'),('syntax_error','not VHDL','zero'),
             ('missing_file',None,'zero')]
 
 def main():
@@ -74,7 +92,9 @@ def main():
             elif expect=='perfect': assert score==1,(task.name,label,result)
             elif expect=='zero': assert score==0,(task.name,label,result)
             elif expect=='no_increase': assert score<=baseline,(task.name,label,result)
-            else: assert score<1,(task.name,label,result)
+            else:
+                assert expect=='imperfect',expect
+                assert score<1,(task.name,label,result)
             record={'task':task.name,'case':label,**result,'seconds':round(time.monotonic()-start,2)}
             records.append(record)
             print(f'{task.name:26s} {label:18s} {score:.6f}',flush=True)
@@ -114,9 +134,11 @@ def main():
         assert checked([harbor,'--version']).stdout.strip()=='0.25.0','Use pinned Harbor 0.25.0'
         for agent in ['nop','oracle']:
             out=args.output/f'harbor-{agent}'
+            job_name=f'{agent}-{time.time_ns()}'
             checked([harbor,'run','--path',str(ROOT),'--agent',agent,'--n-concurrent','1',
-                     '--jobs-dir',str(out),'--job-name',f'{agent}-{time.time_ns()}','--quiet'],timeout=1200)
-            results=list(out.glob('*/**/result.json'))
+                     '--jobs-dir',str(out),'--job-name',job_name,'--quiet'],timeout=1200)
+            # Leave older logs alone, but validate only this invocation's trials.
+            results=list((out/job_name).rglob('result.json'))
             trials=[]
             for path in results:
                 data=json.loads(path.read_text())
@@ -125,6 +147,7 @@ def main():
             for trial in trials:
                 assert trial.get('exception_info') is None,trial.get('exception_info')
                 reward=trial['verifier_result']['rewards']['reward']
+                assert type(reward) in (int,float) and math.isfinite(reward),(agent,reward)
                 assert reward==1 if agent=='oracle' else 0<=reward<1,(agent,reward)
             print(f'Harbor {agent}: {len(trials)} trials validated',flush=True)
     print(f'PASS: {len(records)} container regression checks',flush=True)

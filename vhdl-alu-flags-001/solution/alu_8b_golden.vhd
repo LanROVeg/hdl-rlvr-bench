@@ -20,6 +20,7 @@ begin
         variable res_v    : std_logic_vector(7 downto 0);
         variable n_flag, z_flag, v_flag, c_flag : std_logic;
     begin
+        -- Extend before adding so the carry bit is preserved.
         u_a := '0' & unsigned(A);
         u_b := '0' & unsigned(B);
         res_v  := (others => '0');
@@ -31,10 +32,12 @@ begin
                 u_res  := u_a + u_b;
                 res_v  := std_logic_vector(u_res(7 downto 0));
                 c_flag := u_res(8);
+                -- Same-sign inputs overflow if the result changes sign.
                 v_flag := (A(7) and B(7) and (not res_v(7))) or ((not A(7)) and (not B(7)) and res_v(7));
             when "001" =>
                 u_res  := u_a - u_b;
                 res_v  := std_logic_vector(u_res(7 downto 0));
+                -- This task defines C as borrow, rather than no-borrow.
                 if unsigned(A) < unsigned(B) then c_flag := '1'; else c_flag := '0'; end if;
                 v_flag := (A(7) and (not B(7)) and (not res_v(7))) or ((not A(7)) and B(7) and res_v(7));
             when "010" => res_v := A and B;
@@ -49,6 +52,7 @@ begin
             when others => res_v := A;
         end case;
 
+        -- N and Z describe the final result for every opcode.
         n_flag := res_v(7);
         if res_v = x"00" then z_flag := '1'; else z_flag := '0'; end if;
 

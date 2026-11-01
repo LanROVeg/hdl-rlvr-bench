@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
--- AI-assisted practice reference: synchronous reset > load > enable > hold.
+-- Synchronous reset takes priority over load, then enable.
 entity counter_8b is
     port (clk, rst, load, enable : in std_logic;
           data : in std_logic_vector(7 downto 0);
@@ -22,6 +22,7 @@ begin
             elsif enable = '1' then
                 count <= count + 1;
             end if;
+            -- With no enabled branch, the register keeps its current value.
         end if;
     end process;
     q <= std_logic_vector(count);

@@ -9,6 +9,7 @@ import tempfile
 
 SOURCE = Path('/workspace/alu_8b.vhd')
 TOTAL = 8 * 256 * 256
+# Integer arithmetic is the reference, independent of the submitted RTL.
 TB = '''library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -58,6 +59,7 @@ begin
           end case;
           if r >= 128 then expected(3) := '1'; end if;
           if r = 0 then expected(2) := '1'; end if;
+          -- Allow signal updates to settle; this is not a timing measurement.
           wait for 1 ns;
           if result = std_logic_vector(to_unsigned(r,8)) then
             data_pass := data_pass + 1;
@@ -84,6 +86,35 @@ def run(args, cwd):
         out.seek(0); err.seek(0)
         return p.returncode, out.read().decode(errors='replace'), err.read().decode(errors='replace')
 
+def has_feedback(netlist):
+    # GHDL can emit a variable latch as mux feedback, without a process block.
+    assignments = re.findall(
+        r'(?:\bwith\s+([^;]+?)\s+select\s+)?\b([a-z]\w*)\s*(?:\([^;]*?\))?\s*<=\s*([^;]+);',
+        netlist, re.I)
+    names = {name.lower() for _, name, _ in assignments}
+    dependencies = {name: set() for name in names}
+    for selector, name, expression in assignments:
+        expression = re.sub(r'"[^"]*"|\'[^\']\'', '', selector + ' ' + expression)
+        references = {token.lower() for token in re.findall(r'\b[a-z]\w*\b', expression, re.I)}
+        dependencies[name.lower()].update(references & names)
+
+    # Remove signals whose inputs are already resolved. A cycle cannot be removed.
+    users = {name: set() for name in names}
+    for name, inputs in dependencies.items():
+        for source in inputs:
+            users[source].add(name)
+    ready = [name for name, inputs in dependencies.items() if not inputs]
+    resolved = 0
+    while ready:
+        source = ready.pop()
+        resolved += 1
+        for name in users[source]:
+            dependencies[name].remove(source)
+            if not dependencies[name]:
+                ready.append(name)
+    return resolved != len(names)
+
+
 def grade():
     if not SOURCE.is_file() or SOURCE.is_symlink() or SOURCE.stat().st_size > 65536:
         return 0., {'stage':'invalid_source'}
@@ -103,8 +134,10 @@ def grade():
         if rc:
             return 0., {'stage':'synthesis_failed','stderr':err[-3000:]}
         netlist = re.sub(r'--[^\n]*','',netlist)
-        if re.search(r'\b(process|wait|report|assert|file|foreign)\b',netlist,re.I):
+        if '\\' in netlist or re.search(r'\b(process|wait|report|assert|file|foreign)\b',netlist,re.I):
             return 0., {'stage':'not_combinational_netlist'}
+        if has_feedback(netlist):
+            return 0., {'stage':'feedback_in_netlist'}
         (tmp/'netlist.vhd').write_text(netlist)
         (tmp/'verifier_tb.vhd').write_text(TB)
         for args in [['ghdl','-a','--std=08','netlist.vhd','verifier_tb.vhd'],
@@ -113,6 +146,7 @@ def grade():
             if rc:
                 return 0., {'stage':'verifier_compile_failed','stderr':err[-3000:]}
         rc, out, err = run(['ghdl','-r','--std=08','verifier_tb','--assert-level=error','--stop-time=1ms'],tmp)
+        # Only the verifier-owned bench runs here, so candidate reports earn no credit.
         matches = re.findall(r'VERIFIER_COUNTS:(\d+):(\d+)\s*$',out+err,re.M)
         if rc or len(matches)!=1:
             return 0., {'stage':'simulation_failed_or_incomplete','stderr':err[-3000:]}

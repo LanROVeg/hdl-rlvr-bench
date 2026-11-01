@@ -1,5 +1,14 @@
 # Changes
 
+## November 1, 2026 — final portfolio checks
+
+- Reject synthesized feedback that could previously let an inferred latch earn credit.
+- Expand the task regression suite from 19 to 38 cases, including latches, clocked logic,
+  shift carry, numeric edge cases, size limits, and valid alternate source forms.
+- Validate only the current Harbor job when older results share the output directory.
+- Shorten the README and add brief comments around the arithmetic and verifier boundaries.
+- Reproduce all task regressions, counter checks, and six actual Harbor NOP/oracle trials.
+
 ## October 29, 2026 — verification and portfolio cleanup
 
 - Replaced score-message parsing with exhaustive checks of synthesized ALU netlists.

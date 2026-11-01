@@ -14,6 +14,7 @@ end alu_8b;
 
 architecture Behavioral of alu_8b is
 begin
+    -- Placeholder outputs. Implement the operations and NZVC rules in instruction.md.
     Result <= (others => '0');
     NZVC   <= (others => '0');
 end Behavioral;

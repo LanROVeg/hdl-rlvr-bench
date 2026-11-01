@@ -1,7 +1,6 @@
 # Clocked counter practice reference
 
-An AI-assisted learning example added alongside the combinational benchmark tasks.
-It is not a completed microprocessor or a separate commercial benchmark task.
+A small clocked-logic practice example, separate from the three benchmark tasks.
 
 The 8-bit register changes on rising clock edges only. Priority is synchronous reset,
 then parallel load, then increment when enabled, otherwise hold. Incrementing 255 wraps

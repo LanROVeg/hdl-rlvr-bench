@@ -20,6 +20,7 @@ Audit `/workspace/alu_8b.vhd` against the specification below, identify all func
 ## Submission and verification contract
 Submit one self-contained `alu_8b` entity in `/workspace/alu_8b.vhd` (maximum 64 KiB).
 Use only `ieee.std_logic_1164.all` and optionally `ieee.numeric_std.all`.
+Use basic VHDL identifiers for added signals and variables.
 The design must synthesize in GHDL without inferred latches and be purely combinational.
 File I/O, foreign interfaces, external names, configurations, and additional entities are
 outside this task. The verifier synthesizes the source and simulates only the resulting
